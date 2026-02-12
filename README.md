@@ -88,7 +88,7 @@ crontab -e
 ```
 
 ```cron
-0 8 * * * cd /home/samyak/Personal/substack && /usr/bin/direnv exec . /home/samyak/.local/bin/uv run substack-digest >> /tmp/substack-digest.log 2>&1
+0 8 * * * cd /home/samyak/Personal/substack && direnv exec . /home/samyak/.local/bin/uv run substack-digest >> /tmp/substack-digest.log 2>&1
 ```
 
 ## License
