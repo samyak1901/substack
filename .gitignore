@@ -1,0 +1,15 @@
+# secrets
+.env
+.envrc
+
+# python
+__pycache__/
+*.pyc
+.venv/
+dist/
+*.egg-info/
+.python-version
+
+# tools
+.claude/
+.direnv/
