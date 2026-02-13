@@ -1,0 +1,5 @@
+export SUBSTACK_SID=your_substack_sid_cookie_value
+export GEMINI_API_KEY=your_gemini_api_key
+export RESEND_API_KEY=your_resend_api_key
+export EMAIL_FROM=digest@yourdomain.com
+export EMAIL_TO=you@example.com,friend@example.com
