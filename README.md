@@ -1,95 +1,115 @@
 # Substack Digest
 
-AI-powered daily digest of your Substack subscriptions. Fetches articles from all newsletters you follow, summarizes them with Gemini, and delivers a clean email digest.
+AI-powered daily digest of your Substack subscriptions. Summarizes articles with Gemini, extracts stock pitches into a watchlist, and serves everything through a web dashboard.
 
-## How it works
+## Structure
 
-1. Authenticates with Substack using your session cookie
-2. Fetches the latest posts from every newsletter you subscribe to
-3. Retrieves full article content (including paid posts you have access to)
-4. Summarizes each article into bullet points using Google Gemini
-5. Sends a formatted HTML email digest via Resend
+```
+apps/
+  api/          Python backend — FastAPI, SQLAlchemy, Postgres
+  web/          React + TypeScript + Tailwind frontend
+```
+
+Turborepo monorepo with Bun workspaces. Python tooling via uv + ruff.
 
 ## Prerequisites
 
-- Python 3.11+
-- [uv](https://docs.astral.sh/uv/) (package manager)
-- [direnv](https://direnv.net/) (environment variable management)
-- A [Substack](https://substack.com) account with subscriptions
-- A [Google AI Studio](https://aistudio.google.com/apikey) API key (Gemini)
-- A [Resend](https://resend.com) API key + verified domain (for sending emails)
+- [Bun](https://bun.sh), [Python 3.12+](https://www.python.org/), [uv](https://docs.astral.sh/uv/), [Docker](https://docs.docker.com/get-docker/)
+- [Substack](https://substack.com) account with subscriptions
+- [Google AI Studio](https://aistudio.google.com/apikey) API key (Gemini)
 
-## Setup
+## Getting your Substack session cookie
 
-### 1. Clone and install
+Log into [substack.com](https://substack.com) → DevTools (`F12`) → **Application** → **Cookies** → copy `substack.sid`.
 
-```bash
-git clone https://github.com/YOUR_USERNAME/substack-digest.git
-cd substack-digest
-uv sync
-```
-
-### 2. Configure environment
+## Running with Docker
 
 ```bash
-cp .envrc.template .envrc
+bun install
+cp .env.example .env   # fill in your keys
+bun run docker:up      # starts Postgres + API + frontend
 ```
 
-Edit `.envrc` with your values:
+- Frontend: http://localhost:3000
+- API: http://localhost:8000
+
+Go to [Settings](http://localhost:3000/settings), enter your API keys, and trigger a digest or watchlist build.
+
+To stop: `bun run docker:down`
+
+## Local development
 
 ```bash
-export SUBSTACK_SID=your_substack_sid_cookie_value
-export GEMINI_API_KEY=your_gemini_api_key
-export RESEND_API_KEY=your_resend_api_key
-export EMAIL_FROM=digest@yourdomain.com
-export EMAIL_TO=you@example.com,friend@example.com
+bun install                     # root deps (turbo, workspace deps)
+cd apps/api && uv sync && cd -  # python deps
+
+docker compose up db -d         # start Postgres
+bun run db:migrate              # run migrations
+bun run dev                     # start API + frontend (hot reload via Turbo)
 ```
 
-Then allow direnv to load it:
+Frontend runs on http://localhost:5173 and proxies `/api` to http://localhost:8000.
+
+Or start services individually:
 
 ```bash
-direnv allow
+# API
+cd apps/api && uv run uvicorn app.main:app --reload
+
+# Frontend
+cd apps/web && bun run dev
 ```
 
-### 3. Get your Substack session cookie
-
-1. Log into [substack.com](https://substack.com) in your browser
-2. Open DevTools (`F12`) → **Application** → **Cookies** → `https://substack.com`
-3. Copy the value of `substack.sid`
-
-## Usage
+### Docker dev mode (hot reload in containers)
 
 ```bash
-# Verify your auth works
-uv run substack-digest --list-subs
-
-# Dry run — fetch + summarize, print to console (no email sent)
-uv run substack-digest --dry-run
-
-# Full run — fetch, summarize, and send email
-uv run substack-digest
-
-# Custom time window (e.g. last 3 days)
-uv run substack-digest --hours 72
+bun run docker:dev
 ```
 
-You can also run it as a module:
+## Linting & type checking
 
 ```bash
-uv run python -m substack_digest --list-subs
+bun run lint        # ESLint (frontend) via Turbo
+bun run typecheck   # TypeScript via Turbo
+
+# Python (from apps/api/)
+uv run ruff check .
+uv run ruff format .
 ```
 
-## Automate with cron
-
-Run daily at 8 AM:
+## CLI (no Docker needed)
 
 ```bash
-crontab -e
+cd apps/api
+uv run substack-digest --list-subs     # verify auth
+uv run substack-digest --dry-run       # fetch + summarize, print to console
+uv run substack-digest                 # full run
+uv run substack-digest --hours 72      # custom time window
+uv run substack-digest --dry-run --all # include free subscriptions
 ```
 
-```cron
-0 8 * * * cd /home/samyak/Personal/substack && /usr/bin/direnv exec . /home/samyak/.local/bin/uv run substack-digest >> /tmp/substack-digest.log 2>&1
+## API
+
 ```
+GET    /api/health
+GET    /api/digests
+GET    /api/digests/latest
+GET    /api/digests/{id}
+GET    /api/watchlist
+POST   /api/watchlist/refresh
+POST   /api/jobs/digest
+POST   /api/jobs/watchlist?months=12
+GET    /api/settings
+PUT    /api/settings
+```
+
+## Scheduled jobs
+
+| Job | Schedule | Description |
+|-----|----------|-------------|
+| Daily Digest | 7:00 AM UTC | Digest from last 24h of posts |
+| Monthly Watchlist | 1st of month, 8:00 AM UTC | Extract new stock pitches |
+| Weekly Prices | Monday, 9:00 AM UTC | Refresh watchlist prices |
 
 ## License
 

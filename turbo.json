@@ -1,0 +1,32 @@
+{
+  "$schema": "https://turbo.build/schema.json",
+  "globalEnv": [
+    "DATABASE_URL",
+    "GEMINI_API_KEY",
+    "SUBSTACK_SID",
+    "RESEND_API_KEY",
+    "CORS_ORIGINS"
+  ],
+  "tasks": {
+    "dev": {
+      "cache": false,
+      "persistent": true
+    },
+    "build": {
+      "outputs": ["dist/**"],
+      "dependsOn": ["^build"]
+    },
+    "lint": {
+      "outputs": []
+    },
+    "typecheck": {
+      "outputs": []
+    },
+    "format": {
+      "outputs": []
+    },
+    "test": {
+      "outputs": []
+    }
+  }
+}

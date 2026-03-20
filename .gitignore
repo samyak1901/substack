@@ -6,10 +6,29 @@
 __pycache__/
 *.pyc
 .venv/
-dist/
 *.egg-info/
 .python-version
+uv.lock
+
+# node / bun
+node_modules/
+bun.lockb
+
+# build outputs
+dist/
+apps/*/dist/
+*.tsbuildinfo
 
 # tools
 .claude/
 .direnv/
+.turbo/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# plan
+PLAN.md
