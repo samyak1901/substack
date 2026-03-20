@@ -1,12 +1,11 @@
 from datetime import datetime
 
-from sqlalchemy import DateTime, Float, ForeignKey, Integer, String, Text, func
+from sqlalchemy import Boolean, DateTime, Float, ForeignKey, Index, Integer, String, Text, func
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
 
 class Base(DeclarativeBase):
     pass
-
 
 
 class Digest(Base):
@@ -19,6 +18,9 @@ class Digest(Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
 
     articles: Mapped[list["Article"]] = relationship(
         back_populates="digest", cascade="all, delete-orphan", order_by="Article.position"
@@ -27,6 +29,7 @@ class Digest(Base):
 
 class Article(Base):
     __tablename__ = "articles"
+    __table_args__ = (Index("ix_articles_digest_id", "digest_id"),)
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     digest_id: Mapped[int] = mapped_column(ForeignKey("digests.id", ondelete="CASCADE"))
@@ -36,6 +39,9 @@ class Article(Base):
     url: Mapped[str] = mapped_column(Text, default="")
     summary_html: Mapped[str] = mapped_column(Text, default="")
     summary_raw: Mapped[str] = mapped_column(Text, default="")
+    category: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    reading_time_minutes: Mapped[int] = mapped_column(Integer, default=0)
+    word_count: Mapped[int] = mapped_column(Integer, default=0)
     position: Mapped[int] = mapped_column(Integer, default=0)
 
     digest: Mapped["Digest"] = relationship(back_populates="articles")
@@ -43,6 +49,7 @@ class Article(Base):
 
 class WatchlistEntry(Base):
     __tablename__ = "watchlist_entries"
+    __table_args__ = (Index("ix_watchlist_price_updated", "price_updated_at"),)
 
     ticker: Mapped[str] = mapped_column(String(16), primary_key=True)
     company: Mapped[str] = mapped_column(String(255))
@@ -62,6 +69,9 @@ class WatchlistEntry(Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
     price_updated_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
@@ -69,9 +79,45 @@ class WatchlistEntry(Base):
 
 class ProcessedPost(Base):
     __tablename__ = "processed_posts"
+    __table_args__ = (Index("ix_processed_posts_url", "canonical_url", unique=True),)
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     canonical_url: Mapped[str] = mapped_column(Text, unique=True)
     processed_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+
+
+class JobRun(Base):
+    __tablename__ = "job_runs"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    job_type: Mapped[str] = mapped_column(String(32))
+    status: Mapped[str] = mapped_column(String(16), default="pending")
+    progress_pct: Mapped[int] = mapped_column(Integer, default=0)
+    current_step: Mapped[str] = mapped_column(Text, default="")
+    result_message: Mapped[str | None] = mapped_column(Text, nullable=True)
+    error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+    completed_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+
+
+class Alert(Base):
+    __tablename__ = "alerts"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    ticker: Mapped[str] = mapped_column(
+        String(16), ForeignKey("watchlist_entries.ticker", ondelete="CASCADE")
+    )
+    alert_type: Mapped[str] = mapped_column(String(32))
+    message: Mapped[str] = mapped_column(Text)
+    is_read: Mapped[bool] = mapped_column(Boolean, default=False)
+    triggered_price: Mapped[float | None] = mapped_column(Float, nullable=True)
+    target_price: Mapped[float | None] = mapped_column(Float, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )

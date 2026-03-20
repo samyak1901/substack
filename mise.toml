@@ -1,0 +1,70 @@
+[tools]
+python = "3.12"
+bun = "1.3"
+uv = "latest"
+
+[env]
+_.file = ".env"
+
+[tasks.dev]
+description = "Start API + frontend with hot reload"
+run = "bun run dev"
+
+[tasks.build]
+description = "Build all packages"
+run = "bun run build"
+
+[tasks.lint]
+description = "Lint all packages"
+run = "bun run lint"
+
+[tasks.typecheck]
+description = "Type check frontend"
+run = "bun run typecheck"
+
+[tasks."lint:py"]
+description = "Lint Python code"
+dir = "apps/api"
+run = "uv run ruff check . && uv run ruff format --check ."
+
+[tasks."fix:py"]
+description = "Auto-fix Python lint issues"
+dir = "apps/api"
+run = "uv run ruff check --fix . && uv run ruff format ."
+
+[tasks."db:migrate"]
+description = "Run database migrations"
+dir = "apps/api"
+run = "uv run alembic upgrade head"
+
+[tasks."db:makemigration"]
+description = "Create a new migration"
+dir = "apps/api"
+run = "uv run alembic revision --autogenerate -m"
+
+[tasks."docker:up"]
+description = "Start full stack in Docker"
+run = "docker compose up --build -d"
+
+[tasks."docker:dev"]
+description = "Start full stack with hot reload"
+run = "docker compose -f docker-compose.yml -f docker-compose.dev.yml up"
+
+[tasks."docker:down"]
+description = "Stop Docker stack"
+run = "docker compose down"
+
+[tasks.install]
+description = "Install all dependencies"
+run = """
+bun install
+cd apps/api && uv sync
+"""
+
+[tasks.setup]
+description = "First-time project setup"
+depends = ["install"]
+run = """
+cp -n .env.example .env 2>/dev/null || true
+echo "Done! Edit .env with your API keys, then run: mise run docker:up"
+"""

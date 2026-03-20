@@ -4,7 +4,7 @@ services:
     environment:
       POSTGRES_DB: substack_digest
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
     ports:
       - "5432:5432"
     volumes:
@@ -17,25 +17,26 @@ services:
 
   api:
     build:
-      context: .
+      context: ./apps/api
       dockerfile: Dockerfile
     ports:
       - "8000:8000"
     environment:
-      DATABASE_URL: postgresql+asyncpg://postgres:postgres@db:5432/substack_digest
+      DATABASE_URL: postgresql+asyncpg://postgres:${POSTGRES_PASSWORD:-postgres}@db:5432/substack_digest
       CORS_ORIGINS: "http://localhost:5173,http://localhost:3000"
       SUBSTACK_SID: ${SUBSTACK_SID}
       GEMINI_API_KEY: ${GEMINI_API_KEY}
+      ENV: prod
     depends_on:
       db:
         condition: service_healthy
 
   web:
     build:
-      context: web
+      context: ./apps/web
       dockerfile: Dockerfile
     ports:
-      - "5173:80"
+      - "3000:80"
     depends_on:
       - api
 

@@ -6,6 +6,9 @@ export interface Article {
   url: string;
   summary_html: string;
   summary_raw: string;
+  category: string | null;
+  reading_time_minutes: number;
+  word_count: number;
   position: number;
 }
 
@@ -23,6 +26,13 @@ export interface DigestDetail extends DigestSummary {
 
 export interface DigestListResponse {
   digests: DigestSummary[];
+  total: number;
+  page: number;
+  page_size: number;
+}
+
+export interface ArticleSearchResponse {
+  articles: Article[];
   total: number;
   page: number;
   page_size: number;
@@ -54,7 +64,32 @@ export interface WatchlistResponse {
 }
 
 
+export interface AlertItem {
+  id: number;
+  ticker: string;
+  alert_type: string;
+  message: string;
+  is_read: boolean;
+  triggered_price: number | null;
+  target_price: number | null;
+  created_at: string;
+}
+
+export interface AlertListResponse {
+  alerts: AlertItem[];
+  unread_count: number;
+}
+
 export interface JobResponse {
+  job_id: string;
   status: string;
   message: string;
+}
+
+export interface JobProgress {
+  status: string;
+  progress_pct: number;
+  current_step: string;
+  result_message: string | null;
+  error_message: string | null;
 }

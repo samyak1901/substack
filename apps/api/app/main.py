@@ -4,13 +4,13 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api.routers import digests, jobs, watchlist
 from app.config import get_settings
+from app.routers import digests, jobs, watchlist
 from app.scheduler import create_scheduler
 
 logging.basicConfig(
     level=logging.INFO,
-    format="%(asctime)s [%(levelname)s] %(message)s",
+    format="%(asctime)s [%(levelname)s] %(name)s — %(message)s",
     datefmt="%H:%M:%S",
 )
 
@@ -24,7 +24,7 @@ async def lifespan(app: FastAPI):
     scheduler.shutdown()
 
 
-app = FastAPI(title="Substack Digest API", lifespan=lifespan)
+app = FastAPI(title="Substack Digest API", version="0.2.0", lifespan=lifespan)
 
 origins = get_settings().cors_origins.split(",")
 app.add_middleware(
