@@ -17,6 +17,7 @@ dependencies = [
     "alembic>=1.14",
     "apscheduler>=3.10,<4",
     "tenacity>=9.0",
+    "edgartools>=3.0",
 ]
 
 [project.optional-dependencies]

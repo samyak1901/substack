@@ -5,7 +5,8 @@
     "GEMINI_API_KEY",
     "SUBSTACK_SID",
     "RESEND_API_KEY",
-    "CORS_ORIGINS"
+    "CORS_ORIGINS",
+    "FMP_API_KEY"
   ],
   "tasks": {
     "dev": {

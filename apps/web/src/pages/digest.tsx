@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { Loader2, FileText } from "lucide-react";
 import { cn } from "../lib/cn";
@@ -5,7 +6,26 @@ import { useDigests, useDigest, useLatestDigest } from "../hooks/use-digests";
 import DigestCard from "../components/digest/digest-card";
 import DigestArchive from "../components/digest/digest-archive";
 
-function DigestContent({ id }: { id?: number }) {
+const CATEGORIES = [
+  "all",
+  "macro",
+  "tech",
+  "energy",
+  "healthcare",
+  "financials",
+  "crypto",
+  "real-estate",
+  "consumer",
+  "industrials",
+] as const;
+
+function DigestContent({
+  id,
+  categoryFilter,
+}: {
+  id?: number;
+  categoryFilter: string;
+}) {
   const latestQuery = useLatestDigest();
   const specificQuery = useDigest(id ?? 0, { enabled: id !== undefined });
 
@@ -25,7 +45,9 @@ function DigestContent({ id }: { id?: number }) {
     return (
       <div className="bg-card rounded-xl border border-border shadow-sm p-16 text-center">
         <FileText className="w-10 h-10 mx-auto text-muted-foreground/30" />
-        <p className="text-foreground text-lg font-medium mt-4">No digests yet</p>
+        <p className="text-foreground text-lg font-medium mt-4">
+          No digests yet
+        </p>
         <p className="text-muted-foreground text-sm mt-2 max-w-sm mx-auto">
           Head to Actions and trigger a digest generation to get started.
         </p>
@@ -33,13 +55,25 @@ function DigestContent({ id }: { id?: number }) {
     );
   }
 
-  return <DigestCard digest={digest} />;
+  // Filter articles by category
+  const filteredDigest =
+    categoryFilter === "all"
+      ? digest
+      : {
+          ...digest,
+          articles: digest.articles.filter(
+            (a) => a.category === categoryFilter,
+          ),
+        };
+
+  return <DigestCard digest={filteredDigest} />;
 }
 
 export default function DigestPage() {
   const { id } = useParams<{ id: string }>();
   const digestId = id ? parseInt(id, 10) : undefined;
   const { data: archiveData } = useDigests();
+  const [categoryFilter, setCategoryFilter] = useState("all");
 
   const currentId = digestId ?? archiveData?.digests[0]?.id;
 
@@ -57,7 +91,7 @@ export default function DigestPage() {
                     "flex-shrink-0 px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors whitespace-nowrap",
                     d.id === currentId
                       ? "bg-primary/10 text-primary border-primary/20"
-                      : "bg-secondary text-muted-foreground border-border"
+                      : "bg-secondary text-muted-foreground border-border",
                   )}
                 >
                   {d.date}
@@ -66,7 +100,28 @@ export default function DigestPage() {
             </div>
           </div>
         )}
-        <DigestContent id={digestId} />
+
+        {/* Category filter */}
+        <div className="mb-4 overflow-x-auto">
+          <div className="flex gap-1.5 pb-1">
+            {CATEGORIES.map((cat) => (
+              <button
+                key={cat}
+                onClick={() => setCategoryFilter(cat)}
+                className={cn(
+                  "flex-shrink-0 px-3 py-1 rounded-lg text-xs font-medium transition-colors capitalize",
+                  categoryFilter === cat
+                    ? "bg-primary/10 text-primary"
+                    : "bg-secondary text-muted-foreground hover:text-foreground",
+                )}
+              >
+                {cat === "all" ? "All" : cat}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <DigestContent id={digestId} categoryFilter={categoryFilter} />
       </div>
       {archiveData && archiveData.digests.length > 1 && (
         <div className="w-56 flex-shrink-0 hidden lg:block">

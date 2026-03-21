@@ -1,3 +1,4 @@
+import { Link } from "react-router-dom";
 import { Clock, ExternalLink } from "lucide-react";
 import { cn } from "../../lib/cn";
 import type { Article } from "../../types";
@@ -15,6 +16,17 @@ const CATEGORY_STYLES: Record<string, string> = {
   other: "bg-secondary text-muted-foreground border-border",
 };
 
+// Extract ticker symbols from article text (simple heuristic: $TICKER or standalone uppercase 1-5 letter words)
+function extractTickers(text: string): string[] {
+  const tickerPattern = /\$([A-Z]{1,5})\b/g;
+  const matches = new Set<string>();
+  let match;
+  while ((match = tickerPattern.exec(text)) !== null) {
+    matches.add(match[1]);
+  }
+  return [...matches].slice(0, 5);
+}
+
 export default function ArticleCard({
   article,
   index,
@@ -22,6 +34,10 @@ export default function ArticleCard({
   article: Article;
   index: number;
 }) {
+  const tickers = extractTickers(
+    (article.summary_raw || "") + " " + (article.title || ""),
+  );
+
   return (
     <div className="py-5 border-b border-border last:border-b-0">
       <div className="flex items-start gap-3">
@@ -48,22 +64,32 @@ export default function ArticleCard({
             {article.publication && (
               <>
                 {" "}
-                &middot; <span className="text-primary/70">{article.publication}</span>
+                &middot;{" "}
+                <span className="text-primary/70">{article.publication}</span>
               </>
             )}
           </p>
-          <div className="flex items-center gap-2 mt-1.5">
+          <div className="flex flex-wrap items-center gap-2 mt-1.5">
             {article.category && (
               <span
                 className={cn(
                   "text-xs px-2 py-0.5 rounded-md font-medium border",
                   CATEGORY_STYLES[article.category] ||
-                    "bg-secondary text-muted-foreground border-border"
+                    "bg-secondary text-muted-foreground border-border",
                 )}
               >
                 {article.category}
               </span>
             )}
+            {tickers.map((ticker) => (
+              <Link
+                key={ticker}
+                to={`/stock/${ticker}`}
+                className="text-xs px-2 py-0.5 rounded-md font-medium bg-primary/10 text-primary border border-primary/20 hover:bg-primary/20 transition-colors"
+              >
+                {ticker} &rarr;
+              </Link>
+            ))}
             {article.reading_time_minutes > 0 && (
               <span className="text-xs text-muted-foreground flex items-center gap-1">
                 <Clock className="w-3 h-3" />
