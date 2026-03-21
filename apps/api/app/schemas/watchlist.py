@@ -26,6 +26,7 @@ class WatchlistEntryOut(BaseModel):
 class WatchlistEntryUpdate(BaseModel):
     notes: str | None = None
     conviction: str | None = None
+    target_price: float | None = None
 
 
 class WatchlistResponse(BaseModel):

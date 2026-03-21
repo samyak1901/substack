@@ -14,7 +14,8 @@ class Settings(BaseSettings):
     # API keys
     substack_sid: str = ""
     gemini_api_key: str = ""
-    gemini_model: str = "gemini-2.0-flash"
+    gemini_model: str = "gemini-3-flash-preview"
+    fmp_api_key: str = ""
 
     model_config = {"env_prefix": "", "extra": "ignore", "env_file": "../../.env"}
 

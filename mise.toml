@@ -7,8 +7,13 @@ uv = "latest"
 _.file = ".env"
 
 [tasks.dev]
-description = "Start API + frontend with hot reload"
-run = "bun run dev"
+description = "Start DB, API + frontend with hot reload"
+run = """
+docker compose up db -d
+cd apps/api && uv run alembic upgrade head && cd ../..
+cd apps/api && uv run uvicorn app.main:app --reload --host 0.0.0.0 --port 8000 &
+cd apps/web && bun run dev
+"""
 
 [tasks.build]
 description = "Build all packages"
@@ -53,6 +58,20 @@ run = "docker compose -f docker-compose.yml -f docker-compose.dev.yml up"
 [tasks."docker:down"]
 description = "Stop Docker stack"
 run = "docker compose down"
+
+[tasks.check]
+description = "Run all checks: lint, typecheck, and build for both FE and BE"
+run = """
+echo "=== Python lint ==="
+cd apps/api && uv run ruff check . && uv run ruff format --check . && cd ../..
+echo "=== Frontend lint ==="
+bun run lint
+echo "=== Frontend typecheck ==="
+bun run typecheck
+echo "=== Frontend build ==="
+bun run build
+echo "=== All checks passed ==="
+"""
 
 [tasks.install]
 description = "Install all dependencies"

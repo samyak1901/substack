@@ -1,6 +1,7 @@
 from datetime import datetime
 
 from sqlalchemy import Boolean, DateTime, Float, ForeignKey, Index, Integer, String, Text, func
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
 
@@ -15,9 +16,7 @@ class Digest(Base):
     date: Mapped[str] = mapped_column(String(32), unique=True)
     overview: Mapped[str] = mapped_column(Text, default="")
     article_count: Mapped[int] = mapped_column(Integer, default=0)
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now()
-    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
     )
@@ -66,9 +65,7 @@ class WatchlistEntry(Base):
     conviction: Mapped[str | None] = mapped_column(String(16), nullable=True)
     target_price: Mapped[float | None] = mapped_column(Float, nullable=True)
     notes: Mapped[str | None] = mapped_column(Text, nullable=True)
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now()
-    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
     )
@@ -98,12 +95,8 @@ class JobRun(Base):
     current_step: Mapped[str] = mapped_column(Text, default="")
     result_message: Mapped[str | None] = mapped_column(Text, nullable=True)
     error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now()
-    )
-    completed_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
-    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
 
 class Alert(Base):
@@ -118,6 +111,33 @@ class Alert(Base):
     is_read: Mapped[bool] = mapped_column(Boolean, default=False)
     triggered_price: Mapped[float | None] = mapped_column(Float, nullable=True)
     target_price: Mapped[float | None] = mapped_column(Float, nullable=True)
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now()
-    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class StockResearch(Base):
+    __tablename__ = "stock_research"
+
+    ticker: Mapped[str] = mapped_column(String(16), primary_key=True)
+    company: Mapped[str] = mapped_column(String(255), default="")
+
+    share_price: Mapped[float | None] = mapped_column(Float, nullable=True)
+    market_cap: Mapped[float | None] = mapped_column(Float, nullable=True)
+    enterprise_value: Mapped[float | None] = mapped_column(Float, nullable=True)
+
+    # FMP overview data (profile, ratios, metrics, growth)
+    overview: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
+
+    # Structured JSON blobs (deep research)
+    financials: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
+    price_history: Mapped[list | None] = mapped_column(JSONB, nullable=True)
+    business_overview: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
+    management: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
+    insider_activity: Mapped[list | None] = mapped_column(JSONB, nullable=True)
+    superinvestors: Mapped[list | None] = mapped_column(JSONB, nullable=True)
+    headwinds_tailwinds: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
+    options_data: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
+    auditor: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    ai_analysis: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
+
+    last_refreshed: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
