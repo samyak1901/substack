@@ -5,7 +5,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import get_settings
-from app.routers import digests, jobs, watchlist
+from app.routers import digests, jobs, research, stock, watchlist
 from app.scheduler import create_scheduler
 
 logging.basicConfig(
@@ -37,6 +37,8 @@ app.add_middleware(
 
 app.include_router(digests.router)
 app.include_router(watchlist.router)
+app.include_router(research.router)
+app.include_router(stock.router)
 app.include_router(jobs.router)
 
 

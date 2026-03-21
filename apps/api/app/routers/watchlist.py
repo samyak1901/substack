@@ -78,6 +78,8 @@ async def api_update_entry(
         entry.notes = body.notes
     if body.conviction is not None:
         entry.conviction = body.conviction
+    if body.target_price is not None:
+        entry.target_price = body.target_price
 
     await db.commit()
     await db.refresh(entry)
