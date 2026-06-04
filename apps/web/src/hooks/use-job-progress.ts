@@ -29,6 +29,14 @@ export function useJobProgress(jobId: string | null): JobProgress | null {
     source.onmessage = (event) => {
       const data = JSON.parse(event.data) as JobProgress & { error?: string };
       if (data.error) {
+        progressRef.current = {
+          status: "failed",
+          progress_pct: 0,
+          current_step: "Failed",
+          result_message: null,
+          error_message: data.error,
+        };
+        subscribersRef.current.forEach((cb) => cb());
         source.close();
         return;
       }

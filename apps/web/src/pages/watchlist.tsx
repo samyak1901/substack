@@ -1,9 +1,12 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { RefreshCw, Loader2, Star, Bell, Check } from "lucide-react";
 import { useWatchlist } from "../hooks/use-watchlist";
+import { triggerWatchlist } from "../api/jobs";
 import { refreshPrices, fetchAlerts, markAlertsRead } from "../api/watchlist";
+import { useJobProgress } from "../hooks/use-job-progress";
+import { JobStatusPanel } from "../components/jobs/job-status-panel";
 import WatchlistTable from "../components/watchlist/watchlist-table";
 import { formatDate } from "../lib/format";
 import { cn } from "../lib/cn";
@@ -21,7 +24,9 @@ export default function WatchlistPage() {
   );
   const [sectorFilter, setSectorFilter] = useState("all");
   const [convictionFilter, setConvictionFilter] = useState("all");
+  const [watchlistJobId, setWatchlistJobId] = useState<string | null>(null);
   const queryClient = useQueryClient();
+  const watchlistProgress = useJobProgress(watchlistJobId);
 
   const { data, isLoading } = useWatchlist(sortBy, order);
 
@@ -35,6 +40,17 @@ export default function WatchlistPage() {
     mutationFn: refreshPrices,
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["watchlist"] }),
   });
+
+  const buildMutation = useMutation({
+    mutationFn: () => triggerWatchlist(4),
+    onSuccess: (data) => setWatchlistJobId(data.job_id),
+  });
+
+  useEffect(() => {
+    if (watchlistProgress?.status !== "completed" || !watchlistJobId) return;
+    queryClient.invalidateQueries({ queryKey: ["watchlist"] });
+    queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+  }, [watchlistProgress?.status, watchlistJobId, queryClient]);
 
   const markReadMutation = useMutation({
     mutationFn: markAlertsRead,
@@ -80,18 +96,32 @@ export default function WatchlistPage() {
             </p>
           )}
         </div>
-        <button
-          onClick={() => refreshMutation.mutate()}
-          disabled={refreshMutation.isPending}
-          className="inline-flex items-center gap-2 px-4 py-2 bg-secondary hover:bg-secondary/80 text-foreground border border-border rounded-lg text-sm font-medium transition-colors disabled:opacity-40"
-        >
-          {refreshMutation.isPending ? (
-            <Loader2 className="w-4 h-4 animate-spin" />
-          ) : (
-            <RefreshCw className="w-4 h-4" />
-          )}
-          Refresh Prices
-        </button>
+        <div className="flex flex-wrap gap-2">
+          <button
+            onClick={() => buildMutation.mutate()}
+            disabled={buildMutation.isPending || watchlistProgress?.status === "pending" || watchlistProgress?.status === "running"}
+            className="inline-flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors disabled:opacity-40"
+          >
+            {(buildMutation.isPending || watchlistProgress?.status === "pending" || watchlistProgress?.status === "running") && <Loader2 className="w-4 h-4 animate-spin" />}
+            {watchlistProgress?.status === "pending" || watchlistProgress?.status === "running" ? "Extracting..." : "Extract Ideas"}
+          </button>
+          <button
+            onClick={() => refreshMutation.mutate()}
+            disabled={refreshMutation.isPending}
+            className="inline-flex items-center gap-2 px-4 py-2 bg-secondary hover:bg-secondary/80 text-foreground border border-border rounded-lg text-sm font-medium transition-colors disabled:opacity-40"
+          >
+            {refreshMutation.isPending ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
+              <RefreshCw className="w-4 h-4" />
+            )}
+            Refresh Prices
+          </button>
+        </div>
+      </div>
+
+      <div className="mb-4">
+        <JobStatusPanel progress={watchlistProgress} />
       </div>
 
       {/* Tabs */}
@@ -173,9 +203,19 @@ export default function WatchlistPage() {
                 </p>
                 <p className="text-muted-foreground text-sm mt-2 max-w-sm mx-auto">
                   {sectorFilter === "all" && convictionFilter === "all"
-                    ? "Head to Actions and trigger a watchlist build, or add stocks from the stock profile page."
+                    ? "Extract stock ideas from recent Substack posts, or add stocks from the stock profile page."
                     : "Try adjusting your filters."}
                 </p>
+                {sectorFilter === "all" && convictionFilter === "all" && (
+                  <button
+                    onClick={() => buildMutation.mutate()}
+                    disabled={buildMutation.isPending || watchlistProgress?.status === "pending" || watchlistProgress?.status === "running"}
+                    className="mt-5 inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-40"
+                  >
+                    {(buildMutation.isPending || watchlistProgress?.status === "pending" || watchlistProgress?.status === "running") && <Loader2 className="h-4 w-4 animate-spin" />}
+                    Extract ideas from last 4 weeks
+                  </button>
+                )}
               </div>
             ) : (
               <>

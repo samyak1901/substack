@@ -9,10 +9,14 @@ import {
   TrendingDown,
   Bell,
   FlaskConical,
+  CheckCircle2,
+  CircleAlert,
 } from "lucide-react";
 import { fetchDashboard } from "../api/stock";
+import { fetchSetupStatus } from "../api/setup";
 import type { DashboardMover } from "../api/stock";
 import { formatPrice, formatMarketCap } from "../lib/format";
+import { PRODUCT_TAGLINE, WORKFLOW_STEPS } from "../lib/product";
 
 export default function DashboardPage() {
   const navigate = useNavigate();
@@ -20,6 +24,11 @@ export default function DashboardPage() {
   const { data } = useQuery({
     queryKey: ["dashboard"],
     queryFn: fetchDashboard,
+    staleTime: 60_000,
+  });
+  const { data: setup } = useQuery({
+    queryKey: ["setup-status"],
+    queryFn: fetchSetupStatus,
     staleTime: 60_000,
   });
 
@@ -37,6 +46,36 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-6">
+      <div className="bg-card rounded-xl border border-border p-6 md:p-8">
+        <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-wider text-primary">
+              Research workspace
+            </p>
+            <h1 className="mt-2 text-3xl font-bold tracking-tight text-foreground">
+              Your investing signal desk
+            </h1>
+            <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">
+              {PRODUCT_TAGLINE}
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <Link
+              to="/digests"
+              className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+            >
+              Read digest
+            </Link>
+            <Link
+              to="/research"
+              className="rounded-lg border border-border bg-secondary px-4 py-2 text-sm font-medium text-foreground hover:bg-secondary/80"
+            >
+              Research stock
+            </Link>
+          </div>
+        </div>
+      </div>
+
       {/* Quick Search */}
       <div className="bg-card rounded-xl border border-border p-6">
         <div className="relative max-w-lg mx-auto">
@@ -51,6 +90,49 @@ export default function DashboardPage() {
           />
         </div>
       </div>
+
+      <div className="grid gap-4 md:grid-cols-3">
+        {WORKFLOW_STEPS.map((step) => {
+          const Icon = step.icon;
+          return (
+            <Link
+              key={step.title}
+              to={step.href}
+              className="group rounded-xl border border-border bg-card p-5 transition-colors hover:border-primary/40 hover:bg-card/80"
+            >
+              <div className="flex items-center gap-3">
+                <div className="rounded-lg bg-primary/10 p-2 text-primary">
+                  <Icon className="h-4 w-4" />
+                </div>
+                <h2 className="font-semibold text-foreground">{step.title}</h2>
+              </div>
+              <p className="mt-3 text-sm leading-6 text-muted-foreground">
+                {step.description}
+              </p>
+              <span className="mt-4 inline-flex items-center gap-1 text-sm font-medium text-primary">
+                Open
+                <ChevronRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
+              </span>
+            </Link>
+          );
+        })}
+      </div>
+
+      {setup && (
+        <div className="bg-card rounded-xl border border-border p-5">
+          <div className="mb-4 flex items-center justify-between">
+            <h2 className="text-sm font-semibold text-foreground">Setup status</h2>
+            <Link to="/settings" className="text-xs font-medium text-primary hover:text-primary/80">
+              Manage jobs
+            </Link>
+          </div>
+          <div className="grid gap-3 md:grid-cols-3">
+            <SetupItem label="Substack session" ready={setup.substack_connected} />
+            <SetupItem label="Gemini AI" ready={setup.gemini_configured} />
+            <SetupItem label="Market data" ready={setup.market_data_configured} />
+          </div>
+        </div>
+      )}
 
       <div className="grid md:grid-cols-2 gap-4">
         {/* Today's Digest */}
@@ -195,6 +277,19 @@ export default function DashboardPage() {
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+function SetupItem({ label, ready }: { label: string; ready: boolean }) {
+  const Icon = ready ? CheckCircle2 : CircleAlert;
+  return (
+    <div className="flex items-center gap-3 rounded-lg border border-border bg-secondary/40 px-3 py-2">
+      <Icon className={`h-4 w-4 ${ready ? "text-emerald-600" : "text-amber-600"}`} />
+      <div>
+        <p className="text-sm font-medium text-foreground">{label}</p>
+        <p className="text-xs text-muted-foreground">{ready ? "Configured" : "Missing"}</p>
+      </div>
     </div>
   );
 }

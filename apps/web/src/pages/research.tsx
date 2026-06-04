@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import {
@@ -39,14 +39,14 @@ export default function ResearchPage() {
     },
   });
 
-  // When job completes, refetch research data
-  const jobDone =
-    progress?.status === "completed" || progress?.status === "failed";
-  if (jobDone && activeJobId) {
+  const jobDone = progress?.status === "completed" || progress?.status === "failed";
+
+  useEffect(() => {
+    if (!jobDone || !activeJobId) return;
     queryClient.invalidateQueries({ queryKey: ["research", paramTicker] });
     queryClient.invalidateQueries({ queryKey: ["research-list"] });
-    setActiveJobId(null);
-  }
+    queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+  }, [jobDone, activeJobId, queryClient, paramTicker]);
 
   const handleSearch = useCallback(() => {
     const t = searchInput.trim().toUpperCase();

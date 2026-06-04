@@ -2,22 +2,12 @@ import { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import {
-  Home,
-  BookOpen,
-  BarChart3,
   Bell,
-  Settings,
   Search,
 } from "lucide-react";
 import { cn } from "../../lib/cn";
+import { NAV_ITEMS, PRODUCT_NAME } from "../../lib/product";
 import { fetchAlerts } from "../../api/watchlist";
-
-const NAV_ITEMS = [
-  { to: "/", label: "Home", icon: Home, exact: true },
-  { to: "/digests", label: "Digests", icon: BookOpen, exact: false },
-  { to: "/watchlist", label: "Watchlist", icon: BarChart3, exact: false },
-  { to: "/settings", label: "Actions", icon: Settings, exact: false },
-] as const;
 
 export default function Header() {
   const location = useLocation();
@@ -50,7 +40,7 @@ export default function Header() {
           to="/"
           className="font-bold text-lg tracking-tight text-foreground hover:text-primary transition-colors flex-shrink-0"
         >
-          Digest
+          {PRODUCT_NAME}
         </Link>
 
         <div className="flex-1 max-w-xs hidden md:block">
