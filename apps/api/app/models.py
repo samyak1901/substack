@@ -1,12 +1,26 @@
 from datetime import datetime
 
-from sqlalchemy import Boolean, DateTime, Float, ForeignKey, Index, Integer, String, Text, func
+from sqlalchemy import (
+    JSON,
+    Boolean,
+    DateTime,
+    Float,
+    ForeignKey,
+    Index,
+    Integer,
+    String,
+    Text,
+    func,
+)
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
 
 class Base(DeclarativeBase):
     pass
+
+
+JSONType = JSON().with_variant(JSONB, "postgresql")
 
 
 class Digest(Base):
@@ -125,19 +139,19 @@ class StockResearch(Base):
     enterprise_value: Mapped[float | None] = mapped_column(Float, nullable=True)
 
     # FMP overview data (profile, ratios, metrics, growth)
-    overview: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
+    overview: Mapped[dict | None] = mapped_column(JSONType, nullable=True)
 
     # Structured JSON blobs (deep research)
-    financials: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
-    price_history: Mapped[list | None] = mapped_column(JSONB, nullable=True)
-    business_overview: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
-    management: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
-    insider_activity: Mapped[list | None] = mapped_column(JSONB, nullable=True)
-    superinvestors: Mapped[list | None] = mapped_column(JSONB, nullable=True)
-    headwinds_tailwinds: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
-    options_data: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
+    financials: Mapped[dict | None] = mapped_column(JSONType, nullable=True)
+    price_history: Mapped[list | None] = mapped_column(JSONType, nullable=True)
+    business_overview: Mapped[dict | None] = mapped_column(JSONType, nullable=True)
+    management: Mapped[dict | None] = mapped_column(JSONType, nullable=True)
+    insider_activity: Mapped[list | None] = mapped_column(JSONType, nullable=True)
+    superinvestors: Mapped[list | None] = mapped_column(JSONType, nullable=True)
+    headwinds_tailwinds: Mapped[dict | None] = mapped_column(JSONType, nullable=True)
+    options_data: Mapped[dict | None] = mapped_column(JSONType, nullable=True)
     auditor: Mapped[str | None] = mapped_column(String(255), nullable=True)
-    ai_analysis: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
+    ai_analysis: Mapped[dict | None] = mapped_column(JSONType, nullable=True)
 
     last_refreshed: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
