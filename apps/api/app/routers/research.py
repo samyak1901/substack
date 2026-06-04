@@ -1,3 +1,4 @@
+import inspect
 import logging
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
@@ -15,6 +16,12 @@ from app.services.research import generate_research, get_research
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/research", tags=["research"])
+
+
+async def _create_pending(progress: ProgressReporter) -> None:
+    result = progress.create_pending()
+    if inspect.isawaitable(result):
+        await result
 
 
 def _serialize(r: StockResearch) -> dict:
@@ -87,6 +94,7 @@ async def api_refresh_research(
     if not ticker or len(ticker) > 10:
         raise HTTPException(status_code=400, detail="Invalid ticker")
     progress = ProgressReporter("research")
+    await _create_pending(progress)
     background_tasks.add_task(_run_research, ticker, progress)
     return JobStartResponse(
         job_id=progress.job_id,

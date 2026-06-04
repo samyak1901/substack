@@ -47,7 +47,15 @@ class SubstackClient:
     async def get_subscriptions(self) -> dict:
         client = await self._get_client()
         resp = await client.get(f"{BASE_URL}/subscriptions")
-        resp.raise_for_status()
+        try:
+            resp.raise_for_status()
+        except httpx.HTTPStatusError as exc:
+            if resp.status_code in (400, 401, 403):
+                raise RuntimeError(
+                    "Substack authentication failed. Refresh SUBSTACK_SID from "
+                    "your browser cookies, update .env, and restart the API container."
+                ) from exc
+            raise
         return resp.json()
 
     async def get_recent_posts(

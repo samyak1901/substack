@@ -10,16 +10,34 @@ class ProgressReporter:
         self.job_id = str(uuid.uuid4())
         self.job_type = job_type
 
-    async def start(self):
+    async def create_pending(self):
         async with async_session() as db:
             db.add(
                 JobRun(
                     id=self.job_id,
                     job_type=self.job_type,
-                    status="running",
-                    current_step="Starting...",
+                    status="pending",
+                    current_step="Queued...",
                 )
             )
+            await db.commit()
+
+    async def start(self):
+        async with async_session() as db:
+            job = await db.get(JobRun, self.job_id)
+            if job:
+                job.status = "running"
+                job.current_step = "Starting..."
+                job.progress_pct = 0
+            else:
+                db.add(
+                    JobRun(
+                        id=self.job_id,
+                        job_type=self.job_type,
+                        status="running",
+                        current_step="Starting...",
+                    )
+                )
             await db.commit()
 
     async def update(self, step: str, pct: int):

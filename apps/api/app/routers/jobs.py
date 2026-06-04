@@ -1,11 +1,14 @@
 import asyncio
+import inspect
 import json
 import logging
 
 from fastapi import APIRouter, BackgroundTasks, Query
 from fastapi.responses import StreamingResponse
+from sqlalchemy import select
 
 from app.database import async_session
+from app.models import JobRun
 from app.schemas.jobs import JobStartResponse
 from app.services.digest import generate_and_store_digest
 from app.services.progress import ProgressReporter, get_job_run
@@ -14,6 +17,35 @@ from app.services.watchlist import extract_and_store_watchlist, refresh_all_pric
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/jobs", tags=["jobs"])
+
+
+async def _create_pending(progress: ProgressReporter) -> None:
+    result = progress.create_pending()
+    if inspect.isawaitable(result):
+        await result
+
+
+@router.get("")
+async def api_recent_jobs(limit: int = Query(10, ge=1, le=50)):
+    async with async_session() as db:
+        result = await db.execute(select(JobRun).order_by(JobRun.created_at.desc()).limit(limit))
+        jobs = result.scalars().all()
+        return {
+            "jobs": [
+                {
+                    "id": job.id,
+                    "job_type": job.job_type,
+                    "status": job.status,
+                    "progress_pct": job.progress_pct,
+                    "current_step": job.current_step,
+                    "result_message": job.result_message,
+                    "error_message": job.error_message,
+                    "created_at": job.created_at.isoformat() if job.created_at else None,
+                    "completed_at": job.completed_at.isoformat() if job.completed_at else None,
+                }
+                for job in jobs
+            ]
+        }
 
 
 async def _run_digest(progress: ProgressReporter):
@@ -57,6 +89,7 @@ async def _run_price_refresh(progress: ProgressReporter):
 @router.post("/digest", response_model=JobStartResponse)
 async def api_trigger_digest(background_tasks: BackgroundTasks):
     progress = ProgressReporter("digest")
+    await _create_pending(progress)
     background_tasks.add_task(_run_digest, progress)
     return JobStartResponse(
         job_id=progress.job_id, status="started", message="Digest generation started"
@@ -69,6 +102,7 @@ async def api_trigger_watchlist(
     background_tasks: BackgroundTasks = BackgroundTasks(),
 ):
     progress = ProgressReporter("watchlist")
+    await _create_pending(progress)
     background_tasks.add_task(_run_watchlist, weeks, progress)
     return JobStartResponse(
         job_id=progress.job_id,
@@ -80,6 +114,7 @@ async def api_trigger_watchlist(
 @router.post("/price-refresh", response_model=JobStartResponse)
 async def api_trigger_price_refresh(background_tasks: BackgroundTasks):
     progress = ProgressReporter("price_refresh")
+    await _create_pending(progress)
     background_tasks.add_task(_run_price_refresh, progress)
     return JobStartResponse(
         job_id=progress.job_id, status="started", message="Price refresh started"
