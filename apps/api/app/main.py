@@ -24,7 +24,7 @@ async def lifespan(app: FastAPI):
     scheduler.shutdown()
 
 
-app = FastAPI(title="Substack Digest API", version="0.2.0", lifespan=lifespan)
+app = FastAPI(title="Signal Desk API", version="0.3.0", lifespan=lifespan)
 
 origins = get_settings().cors_origins.split(",")
 app.add_middleware(
@@ -44,4 +44,14 @@ app.include_router(jobs.router)
 
 @app.get("/api/health")
 async def health():
-    return {"status": "ok"}
+    return {"status": "ok", "service": "signal-desk", "version": "0.3.0"}
+
+
+@app.get("/api/setup/status")
+async def setup_status():
+    settings = get_settings()
+    return {
+        "substack_connected": bool(settings.substack_sid),
+        "gemini_configured": bool(settings.gemini_api_key),
+        "market_data_configured": bool(settings.fmp_api_key),
+    }

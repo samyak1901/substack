@@ -1,7 +1,7 @@
 [project]
 name = "substack-digest"
-version = "0.2.0"
-description = "Daily AI-powered digest of your Substack subscriptions"
+version = "0.3.0"
+description = "AI-powered investment research workspace for Substack digests, stock ideas, and market analysis"
 license = "MIT"
 requires-python = ">=3.12"
 dependencies = [
