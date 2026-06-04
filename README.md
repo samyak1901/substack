@@ -1,6 +1,14 @@
-# Substack Digest
+# Signal Desk
 
-AI-powered daily digest of your Substack subscriptions. Summarizes articles with Gemini, extracts stock pitches into a watchlist, and serves everything through a web dashboard.
+AI-powered investment research workspace for Substack subscriptions. Signal Desk summarizes articles with Gemini, extracts stock pitches into a watchlist, generates stock research, tracks alerts, and serves everything through a web dashboard.
+
+## Current status
+
+- Product direction has moved from a simple Substack digest into an investment research workspace.
+- Frontend, API, Postgres, migrations, stock profile endpoints, research endpoints, watchlist endpoints, and job progress streaming are working locally.
+- Digest generation starts correctly and reports progress/failure through Server-Sent Events.
+- If digest generation fails with Substack authentication, refresh `SUBSTACK_SID` from your browser cookies and restart the API container.
+- Current known limitation: Substack cookie auth is fragile because `substack.sid` expires or can be rejected by Substack. The app now surfaces this clearly instead of appearing stuck.
 
 ## Structure
 
@@ -10,7 +18,7 @@ apps/
   web/          React + TypeScript + Tailwind frontend
 ```
 
-Turborepo monorepo with Bun workspaces. Python tooling via uv + ruff.
+Turborepo monorepo with Bun workspaces. Python tooling via `uv` and `ruff`.
 
 ## Prerequisites
 
@@ -18,24 +26,82 @@ Turborepo monorepo with Bun workspaces. Python tooling via uv + ruff.
 - [Substack](https://substack.com) account with subscriptions
 - [Google AI Studio](https://aistudio.google.com/apikey) API key (Gemini)
 
-## Getting your Substack session cookie
+## Environment
+
+Create `.env` at the repo root:
+
+```bash
+cp .env.example .env
+```
+
+Required values:
+
+```env
+SUBSTACK_SID=your_substack_sid_cookie_value
+GEMINI_API_KEY=your_gemini_api_key
+FMP_API_KEY=your_fmp_api_key
+POSTGRES_PASSWORD=postgres
+```
+
+### Getting your Substack session cookie
 
 Log into [substack.com](https://substack.com) → DevTools (`F12`) → **Application** → **Cookies** → copy `substack.sid`.
 
-## Running with Docker
+If digest generation returns a Substack authentication error, repeat this step, update `.env`, and restart the API container:
 
 ```bash
-bun install
-cp .env.example .env   # fill in your keys
-bun run docker:up      # starts Postgres + API + frontend
+docker compose -f docker-compose.yml -f docker-compose.dev.yml restart api
 ```
 
-- Frontend: http://localhost:3000
+## Running everything together
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.dev.yml up
+```
+
+- Frontend: http://localhost:5173
 - API: http://localhost:8000
+- Postgres: localhost:5432
 
-Go to [Settings](http://localhost:3000/settings), enter your API keys, and trigger a digest or watchlist build.
+The dev compose setup runs migrations before starting the API.
 
-To stop: `bun run docker:down`
+Run in the background:
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d
+```
+
+Stop everything:
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.dev.yml down
+```
+
+Reset the local database:
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.dev.yml down -v
+docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d
+```
+
+View logs:
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.dev.yml logs -f
+```
+
+Useful health checks:
+
+```bash
+curl http://localhost:8000/api/health
+curl http://localhost:5173/api/health
+```
+
+Expected health response:
+
+```json
+{"status":"ok","service":"signal-desk","version":"0.3.0"}
+```
 
 ## Local development
 
@@ -60,7 +126,7 @@ cd apps/api && uv run uvicorn app.main:app --reload
 cd apps/web && bun run dev
 ```
 
-### Docker dev mode (hot reload in containers)
+### Docker dev mode via package scripts
 
 ```bash
 bun run docker:dev
@@ -75,6 +141,21 @@ bun run typecheck   # TypeScript via Turbo
 # Python (from apps/api/)
 uv run ruff check .
 uv run ruff format .
+```
+
+If Bun is not installed locally, frontend checks can be run with npm:
+
+```bash
+npm run typecheck --workspace apps/web
+npm run lint --workspace apps/web
+npm run build --workspace apps/web
+```
+
+Backend tests:
+
+```bash
+cd apps/api
+uv run pytest tests -q
 ```
 
 ## CLI (no Docker needed)
@@ -92,15 +173,51 @@ uv run substack-digest --dry-run --all # include free subscriptions
 
 ```
 GET    /api/health
+GET    /api/setup/status
 GET    /api/digests
 GET    /api/digests/latest
 GET    /api/digests/{id}
+GET    /api/digests/search?q=AAPL
 GET    /api/watchlist
-POST   /api/watchlist/refresh
+PATCH  /api/watchlist/{ticker}
+GET    /api/watchlist/alerts
+POST   /api/watchlist/alerts/mark-read
+GET    /api/jobs
 POST   /api/jobs/digest
-POST   /api/jobs/watchlist?months=12
-GET    /api/settings
-PUT    /api/settings
+POST   /api/jobs/watchlist?weeks=4
+POST   /api/jobs/price-refresh
+GET    /api/jobs/{job_id}/progress
+GET    /api/research
+GET    /api/research/{ticker}
+POST   /api/research/{ticker}/refresh
+GET    /api/stock/dashboard/summary
+GET    /api/stock/unified/search?q=AAPL
+GET    /api/stock/search/tickers?q=AAPL
+GET    /api/stock/{ticker}
+GET    /api/stock/{ticker}/quarterly
+GET    /api/stock/{ticker}/articles
+GET    /api/stock/{ticker}/ai-analysis
+POST   /api/stock/{ticker}/ai-analysis
+POST   /api/stock/watchlist
+DELETE /api/stock/watchlist/{ticker}
+```
+
+## Local smoke tests performed
+
+The following have been verified locally against a clean Docker database:
+
+- Frontend serves at http://localhost:5173
+- API serves at http://localhost:8000
+- Vite proxy works through http://localhost:5173/api/health
+- Alembic migrations run from `001` through `006` on a clean database
+- Core digest, watchlist, jobs, research, stock search, stock profile, and dashboard endpoints return successful responses
+- Watchlist add, update, and remove flow works
+- Digest job progress stream emits `running` and then either `completed` or `failed`
+
+Current digest failure mode with stale cookies:
+
+```txt
+Substack authentication failed. Refresh SUBSTACK_SID from your browser cookies, update .env, and restart the API container.
 ```
 
 ## Scheduled jobs
@@ -108,7 +225,7 @@ PUT    /api/settings
 | Job | Schedule | Description |
 |-----|----------|-------------|
 | Daily Digest | 7:00 AM UTC | Digest from last 24h of posts |
-| Monthly Watchlist | 1st of month, 8:00 AM UTC | Extract new stock pitches |
+| Weekly Watchlist | Weekly | Extract new stock pitches |
 | Weekly Prices | Monday, 9:00 AM UTC | Refresh watchlist prices |
 
 ## License
