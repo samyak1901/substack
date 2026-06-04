@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Loader2, Newspaper, BarChart3, RefreshCw } from "lucide-react";
 import { Toaster, toast } from "sonner";
@@ -121,25 +121,31 @@ export default function SettingsPage() {
   const isPriceBusy =
     priceMutation.isPending || priceProgress?.status === "running";
 
-  // Invalidate queries when jobs complete
-  if (digestProgress?.status === "completed" && digestJobId) {
-    queryClient.invalidateQueries({ queryKey: ["digests"] });
-  }
-  if (
-    (watchlistProgress?.status === "completed" ||
-      priceProgress?.status === "completed") &&
-    (watchlistJobId || priceJobId)
-  ) {
-    queryClient.invalidateQueries({ queryKey: ["watchlist"] });
-  }
+  useEffect(() => {
+    if (digestProgress?.status === "completed" && digestJobId) {
+      queryClient.invalidateQueries({ queryKey: ["digests"] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+    }
+  }, [digestProgress?.status, digestJobId, queryClient]);
+
+  useEffect(() => {
+    if (
+      (watchlistProgress?.status === "completed" ||
+        priceProgress?.status === "completed") &&
+      (watchlistJobId || priceJobId)
+    ) {
+      queryClient.invalidateQueries({ queryKey: ["watchlist"] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+    }
+  }, [watchlistProgress?.status, priceProgress?.status, watchlistJobId, priceJobId, queryClient]);
 
   return (
     <div>
       <Toaster position="bottom-right" richColors />
-      <h1 className="text-2xl font-bold text-foreground mb-1">Actions</h1>
+      <h1 className="text-2xl font-bold text-foreground mb-1">Jobs</h1>
       <p className="text-sm text-muted-foreground mb-6">
-        Digest runs daily and watchlist updates weekly. Use these to trigger
-        manually.
+        Run and monitor data jobs that turn Substack posts into digests,
+        watchlist ideas, and updated market prices.
       </p>
 
       <div className="space-y-4">
